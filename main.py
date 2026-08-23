@@ -2,7 +2,10 @@ import queue
 import threading
 import time
 
+import failure_detection
+from config import Config
 from manager import manager, invia_richiesta
+from menu import Menu
 from nodi import list_nodes, deploy_container, stop_container
 from nodo import Nodo
 from utils import scelta_deploy_container, scelta_stop_container, scelta_remove_container
@@ -26,27 +29,18 @@ if __name__ == '__main__':
     #avvio il thread
     thread_manager.start()
 
-    #per ora, elenco dei servizi validi (per evitare di scaricare immagini troppo pesanti sui container accidentalmente)
-    servizi_validi = ["alpine", "hello-world"]
+    #creo un thread che si occupa di controllare se i nodi sono caduti per gestire il problema
+    thread_failure_detection = threading.Thread(target=failure_detection.heartbeat, args=(lista_nodi, coda, 5), daemon=True)
+    thread_failure_detection.start()
 
-    #menu per l'utente così può specificare che servizio vuole fare runnare
-    while True:
-        comando = input(f"---\nManda un servizio da schedulare ('exit' per uscire): \nServizi disponibili: {servizi_validi}\n")
-        #uscita forzata dal programma, senza aspettare che il manager abbia finito con la coda.
-        if comando == "exit forzata":
-            break
-        #uscita "soft" dal programma, aspetta che il manager finisca le richieste in coda prima di chiudersi
-        if comando == "exit":
-            #blocca l'esecuzione finché il manager non ha finito tutto quello che c'era in coda (tracciato da task_done)
-            coda.join()
-            break
-        if comando not in servizi_validi:
-            print("Comando o servizio non disponibile, riprova con uno dei comandi/servizi specificati sopra.")
-            continue
-        #invia la richiesta all'oggetto "coda", condiviso con il thread manager
-        invia_richiesta(coda, comando)
-        #per printare di nuovo la richiesta di input dopo l'operazione aspetta 3 secondi (posso sostituirlo dopo con un .join() )
-        time.sleep(3)
+    #per ora, elenco dei servizi validi (per evitare di scaricare immagini troppo pesanti sui container accidentalmente)
+    servizi_validi = [
+        Config("alpine", "sleep infinity"),
+        Config(image="hello-world")
+    ]
+
+    menu = Menu(lista_nodi, coda, servizi_validi)
+    menu.avvia_menu()
 
     print("---Il codice ha finito di eseguire---")
 

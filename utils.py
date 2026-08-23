@@ -1,12 +1,20 @@
 from nodi import deploy_container, stop_container, remove_container
+from datetime import datetime, timezone, timedelta
 
-def crea_config(image, command):
-    return {
+#SPOSTATO NELLA CLASSE Config
+def crea_config(image, command, name=None):
+    config= {
         "image": image,
         "command": command,
         "detach": True, #Sempre True, i container devono runnare in background
     }
 
+    if name is not None:
+        config["name"] = name
+
+    return config
+
+#da SPOSTARE NELLA CLASSE Config
 def scegli_config():
     #SOLO TEST, così non runno immagini che non voglio scaricare
     immagine = input("Che immagine vuoi usare? \n1) hello-world, \n2) alpine\n")
@@ -67,3 +75,15 @@ def scelta_remove_container(lista_nodi, lista_nodi_containers):
         exit()
     n_container = int(input("Quale container vuoi rimuovere? (Solo container con status 'down')\n"))
     remove_container(lista_nodi[nome_nodo], lista_nodi_containers[nome_nodo][n_container]["id"])
+
+#controlla se il container è più vecchio di "soglia_minuti" minuti
+#lo uso per capire se posso cancellare un container in stato di "Created" che non sta eseguendo nulla perché non si è avviato
+def is_container_vecchio(container, soglia_minuti=1):
+    creato = datetime.fromisoformat(container.attrs["Created"].replace("Z", "+00:00"))
+    eta = datetime.now(timezone.utc) - creato
+    return eta > timedelta(minutes=soglia_minuti)
+
+#mostra i config di un servizio in modo ordinato (capire se implementare o no)
+def mostra_config(servizio):
+
+    pass

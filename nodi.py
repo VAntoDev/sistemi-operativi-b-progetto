@@ -24,20 +24,20 @@ def list_nodes(nodi, tutti=False, stampa=False):
                 #aggiunge le informazioni alla lista dei containers attivi di ogni nodo
                 diz_nodo_containers[nome] = info_containers
             else:
-                info_containers = nodo.info_container_attivi_e_spenti()
+                info_containers = nodo.info_container_spenti_e_attivi()
                 if stampa == True:
                     print(f"{nome} | {'UP' if stato else 'DOWN'} | Container spenti e attivi(" + f'{len(info_containers)}' + "): " + f'{info_containers}')
                 # aggiunge le informazioni alla lista dei containers attivi di ogni nodo
                 diz_nodo_containers[nome] = info_containers
         else:
-            print(f"{nome} | {stato}")
+            print(f"{nome} | {'UP' if stato else 'DOWN'}")
     return diz_nodo_containers
 
 #fa partire un container sul nodo specificato, con l'immagine e il comando del dizionario "config"
 def deploy_container(node, config):
     try:
         node.client.containers.run(**config)
-        print("Container: " + f'{config['image']}\n' + "Deployato (run) sul nodo: " + f'{node.nome}')
+        print("Container: " + f'{config['image']}' + " deployato (run) sul nodo: " + f'{node.nome}')
     except (DockerException, Exception) as e:
         print("Errore nel deploy del container: ", e)
 
