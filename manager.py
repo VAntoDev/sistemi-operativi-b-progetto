@@ -1,13 +1,12 @@
 import time
 import queue
-import threading
 import uuid
 
 from docker.errors import DockerException
 
 from config import Config
-from nodi import list_nodes, deploy_container, stop_container
-from nodo import Nodo
+from cluster import list_nodes, deploy_container, stop_container
+
 from utils import is_container_vecchio
 
 #calcola qual è il nodo con meno container attivi attualmente
@@ -17,6 +16,10 @@ def trova_nodo_least_loaded(lista_nodi, nodi_e_container):
         if lista_nodi[nodo].disponibile:
             punteggio = len(containers)
             punteggi[nodo] = punteggio
+    #nel caso in cui nessun nodo sia acceso la variabile è vuota e il min() darebbe errore
+    if not punteggi:
+        return None
+
     #ritorna il punteggio minimo tra i punteggi salvati nel dizionario,
     #il nodo con il punteggio minore è quello con meno container attivi
     #se due hanno punteggi uguali, sceglie il primo nella lista
@@ -28,6 +31,10 @@ def trova_nodo_most_loaded(nodi_e_container):
     for nodo, containers in nodi_e_container.items():
         punteggio = len(containers)
         punteggi[nodo] = punteggio
+    #nel caso in cui nessun nodo sia acceso la variabile è vuota e il max() darebbe errore
+    if not punteggi:
+        return None
+
     #ritorna il punteggio massimo tra i punteggi salvati nel dizionario
     return max(punteggi, key=lambda punteggio_nodo: punteggi[punteggio_nodo])
 
@@ -55,11 +62,11 @@ def disattiva_svuota_nodo(nome_nodo, lista_nodi, coda):
         #ferma il container attuale, ora che è stato schedulato per essere deployato dal manager su altri nodi
         stop_container(nodo, container["id"])
 
-    print(f"Nodo {nome_nodo} svuotato: {len(containers_da_spostare)} container rischedulati altrove.")
+    print(f"\nManager> Nodo {nome_nodo} svuotato: {len(containers_da_spostare)} container rischedulati altrove.")
 
 def attiva_nodo(nome_nodo, lista_nodi):
     lista_nodi[nome_nodo].disponibile = True
-    print(f"Nodo {nome_nodo} attivato, torna a poter ricevere nuovi container.")
+    print(f"\nManager> Nodo {nome_nodo} attivato, torna a poter ricevere nuovi container.")
 
 #rimuove i container spenti su un nodo
 def rimuovi_container_spenti(node):
@@ -80,9 +87,9 @@ def rimuovi_container_spenti(node):
                 container.remove()
                 rimossi.append(nome)
             except (DockerException, Exception) as e:
-                print(f"Errore rimuovendo {nome}: {e}")
+                print(f"Manager> Errore rimuovendo {nome}: {e}")
     if rimossi: #se rimossi ha elementi allora runna il print, altrimenti no perché non ci sono stati container da rimuovere
-        print(f"Container già spenti rimossi su {node.nome}: {rimossi}")
+        print(f"Manager> Container già spenti rimossi su {node.nome}: {rimossi}")
     return rimossi
 
 #data una lista di nodi, su ognuno di essi esegue "rimuovi_container_spenti" se è attivo
@@ -93,7 +100,7 @@ def rimuovi_container_spenti_tutti_nodi(lista_nodi):
             rimuovi_container_spenti(nodo)
         else:
             #print(f"{nome} è down, salto la pulizia")
-            return
+            continue
 
 #prende i nodi e le informazioni sui loro container per schedulare un servizio sul nodo least loaded
 def schedula_servizio(config, lista_nodi, lista_nodi_stats):
@@ -110,6 +117,11 @@ def schedula_servizio(config, lista_nodi, lista_nodi_stats):
 
     #calcola il nodo least loaded e salva il risultato
     nodo_least_loaded = trova_nodo_least_loaded(lista_nodi, lista_nodi_stats)
+
+    #se trova_nodo_least_loaded ha ritornano None vuol dire che nessun nodo era attivo
+    if nodo_least_loaded is None:
+        print("Manager> Nessun nodo disponibile per il deploy.")
+        return
 
     #esegue il container nel nodo con meno container attivi
     deploy_container(lista_nodi[nodo_least_loaded], config_diz)
@@ -137,11 +149,16 @@ def spegni_servizio(servizio, lista_nodi, lista_nodi_stats):
 
     #se nessun nodo ha quel servizio, allora fermati
     if not nodi_stats_con_servizio:
-        print(f"Nessun nodo ha repliche attive di '{servizio.servizio_name}'")
+        print(f"Manager> Nessun nodo ha repliche attive di '{servizio.servizio_name}'")
         return
 
     #trova il nodo most_loaded SOLO tra i nodi che contengono quel servizio
     nodo_most_loaded = trova_nodo_most_loaded(nodi_stats_con_servizio)
+
+    # se trova_nodo_most_loaded ha ritornano None vuol dire che nessun nodo era attivo
+    if nodo_most_loaded is None:
+        print("Manager> Nessun nodo attivo su cui fermare il servizio")
+        return
 
     #trova l'id del PRIMO container nel nodo di quel servizio, in base al nome del container (composto dal nome dal nome_servizio + uuid)
     id_container = next(
@@ -151,7 +168,7 @@ def spegni_servizio(servizio, lista_nodi, lista_nodi_stats):
 
     #se non esiste un container di quel servizio sul nodo, allora non mandare lo stop_container
     if id_container is None:
-        print(f"Nessun container del servizio '{servizio.servizio_name}' trovato su {nodo_most_loaded}")
+        print(f"Manager> Nessun container del servizio '{servizio.servizio_name}' trovato su {nodo_most_loaded}")
         return
 
     #spegne il servizio su quel nodo
@@ -170,32 +187,35 @@ def manager(lista_nodi, coda):
             #prende dalla coda una richiesta, se non c'è nessuna richiesta va in queue.empty -> pass
             #aspetta fino a 1 secondo per una nuova richiesta e ne gestisce una per volta, poi ricontrolla
             richiesta = coda.get(timeout=1)
+            #da qui parte ad elaborare la richiesta
+            try:
+                print(f"\nManager> Schedulo ", richiesta["azione"], " ==> " , end="")
+                if isinstance(richiesta["target"], Config):
+                    richiesta["target"].stampa_config()
+                #l'azione può essere: deploy, scale_down, drain_nodo (che lo disattiva nel farlo), attiva_nodo
+                azione = richiesta["azione"]
+                #il target può essere un servizio o un nodo
+                target = richiesta["target"]
 
-            print(f"Manager> Schedulo ", richiesta["azione"], " ==> " , end="")
-            if isinstance(richiesta["target"], Config):
-                richiesta["target"].stampa_config()
-            #l'azione può essere: deploy, scale_down, drain_nodo (che lo disattiva nel farlo), attiva_nodo
-            azione = richiesta["azione"]
-            #il target può essere un servizio o un nodo
-            target = richiesta["target"]
-
-            match azione:
-                case "deploy":
-                    #schedula il servizio sul nodo least loaded
-                    schedula_servizio(target, lista_nodi, list_nodes(lista_nodi))
-                case "scale_down":
-                    #spegne un servizio sul nodo most loaded
-                    spegni_servizio(target, lista_nodi, list_nodes(lista_nodi))
-                case "drain_nodo":
-                    disattiva_svuota_nodo(target, lista_nodi, coda)
-                case "attiva_nodo":
-                    attiva_nodo(target, lista_nodi)
-                case _:
-                    print(f"Azione sconosciuta: {azione}")
-            list_nodes(lista_nodi, stampa=True)
-
-            #segnala che questa richiesta è stata soddisfatta, quindi attiva il join()
-            coda.task_done()
+                match azione:
+                    case "deploy":
+                        #schedula il servizio sul nodo least loaded
+                        schedula_servizio(target, lista_nodi, list_nodes(lista_nodi))
+                    case "scale_down":
+                        #spegne un servizio sul nodo most loaded
+                        spegni_servizio(target, lista_nodi, list_nodes(lista_nodi))
+                    case "drain_nodo":
+                        disattiva_svuota_nodo(target, lista_nodi, coda)
+                    case "attiva_nodo":
+                        attiva_nodo(target, lista_nodi)
+                    case _:
+                        print(f"Manager> Azione sconosciuta: {azione}")
+                list_nodes(lista_nodi, stampa=True)
+            except Exception as e:
+                print(f"Manager> Errore nella gestione della richiesta: {e}")
+            finally:
+                #segnala che questa richiesta è stata gestita, così il join() "rientra"
+                coda.task_done()
         #se la coda è vuota, fai altro (questo forse lo modificherò in seguito, magari in un altro thread)
         except queue.Empty:
             rimuovi_container_spenti_tutti_nodi(lista_nodi)

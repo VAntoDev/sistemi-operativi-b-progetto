@@ -12,7 +12,7 @@ class Nodo:
             #il timeout è il tempo per cui deve provare a connettersi prima di smettere in caso in cui il nodo sia down
             self.client = docker.DockerClient(base_url=f'tcp://{ip}:2375', timeout=self.timeout)
         except DockerException:
-            print(f"Attenzione: impossibile connettersi a {nome} ({ip}) alla creazione. Verrà considerato down finché non risponde.")
+            print(f"Info> Attenzione: impossibile connettersi a {nome} ({ip}) alla creazione. Verrà considerato down finché non risponde.")
             self.client = None
         #serve tenerne traccia per rilanciare i container del nodo in un altro nodo in caso di crash
         self.container_attivi = {}
@@ -27,6 +27,7 @@ class Nodo:
             try:
                 self.client = docker.DockerClient(base_url=f'tcp://{self.ip}:2375', timeout=self.timeout)
             except DockerException:
+                self.client = None #<-- !!! controlla se funziona prima di lasciarlo qui
                 return False
         #se il nodo è connesso, fa il ping per vedere se continua a essere connesso, se non lo è ritorna False
         try:

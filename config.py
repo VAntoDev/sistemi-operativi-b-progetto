@@ -2,7 +2,7 @@ class Config:
     def __init__(self, image, servizio_name, command=None, name=None):
         self.image = image
         self.command = command
-        #nome personalizzato del container #da eliminare, non serve
+        #nome personalizzato del container
         self.name = name
         #nome di questo specifico servizio definito dall'utente
         self.servizio_name = servizio_name

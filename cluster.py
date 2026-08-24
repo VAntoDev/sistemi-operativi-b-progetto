@@ -3,10 +3,6 @@
 
 import docker
 from docker.errors import DockerException
-#usato per le animazioni di caricamento (altrimenti non capisco se si è bloccato tutto)
-from yaspin import yaspin
-
-from nodo import Nodo
 
 #stampa lo stato attuale di tutti i nodi, con anche i loro container attivi
 def list_nodes(nodi, tutti=False, stampa=False):
@@ -52,28 +48,26 @@ def disponibilita_nodi(nodi, attivi=True):
     return nomi_nodi
 
 #fa partire un container sul nodo specificato, con l'immagine e il comando del dizionario "config"
-def deploy_container(node, config):
+def deploy_container(nodo, config):
     try:
-        node.client.containers.run(**config)
-        print(f"Container: {config['image']} deployato (run) sul nodo: {node.nome}")
-    except (DockerException, Exception) as e:
+        nodo.client.containers.run(**config)
+        print(f"\nInfo> Container: {config['image']} deployato (run) sul nodo: {nodo.nome}")
+    except Exception as e:
         #può dare errore se prova a startare un container con un nome già esistente sul nodo, è possibile succeda ma molto poco probabile
         print("Errore nel deploy del container: ", e)
 
 #ferma un container dato il suo nodo e il suo id
-def stop_container(node, id_container):
+def stop_container(nodo, id_container):
     try:
-        with yaspin(text="Fermo il container..."):
-            node.client.containers.get(id_container).stop() #stop attende che il processo termini, per questo può volerci un po' per chiudere il container
-        print("Container fermato.\n")
-    except (DockerException, Exception) as e:
+        nodo.client.containers.get(id_container).stop() #stop attende che il processo termini, per questo può volerci un po' per chiudere il container
+        print("\nInfo> Un container sul nodo " + f'{nodo.nome}' + " è stato fermato\n")
+    except Exception as e:
         print("Errore nello stop del container: ", e)
 
 #rimuove un container dato il suo nodo e il suo id
-def remove_container(node, id_container):
+def remove_container(nodo, id_container):
     try:
-        with yaspin(text="Rimuovo il container..."):
-            node.client.containers.get(id_container).remove() #ricorda, per rimuovere il container deve prima essere spento
-        print("Container rimosso.\n")
-    except (DockerException, Exception) as e:
+        nodo.client.containers.get(id_container).remove() #ricorda, per rimuovere il container deve prima essere spento
+        print("\nInfo> Un container sul nodo " + f'{nodo.nome}' + " è stato rimosso\n")
+    except Exception as e:
         print("Errore nella rimozione del container, controlla che fosse spento. Errore: ", e)

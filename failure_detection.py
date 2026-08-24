@@ -1,24 +1,22 @@
 #in questo file ci sono la Failure Detection tramite Heartbeat per controllare se un nodo cade + il Failover per i suoi container su altri nodi attivi
-import threading
+
 import time
 
 from config import Config
 from manager import invia_richiesta
-from nodo import Nodo
 
-stato_nodi = {}
 
 #controlla lo stato dei nodi, se un nodo cade attiva il failover
-def heartbeat(lista_nodi, coda, intervallo=5):
+def heartbeat(lista_nodi, coda, intervallo=3):
     while True:
         try:
             for nome, nodo in lista_nodi.items():
-                stato_nodi[nome] = nodo.is_up()
-                if stato_nodi[nome] == False:
+                #se un nodo è down, allora attiva il failover per spostare i suoi container su altri nodi
+                stato_nodo = nodo.is_up()
+                if stato_nodo == False:
                     failover(nodo.container_attivi, nodo.nome, coda)
-            #print(stato_nodi)
         except Exception as e:
-            print(f"Errore nel thread heartbeat: {e}")
+            print(f"Failure_detection> Errore nel thread heartbeat: {e}")
         time.sleep(intervallo)
 
 #questa funzione runna i container che erano sul nodo caduto sugli altri container, passandoli nella coda del manager
@@ -42,4 +40,4 @@ def failover(container_attivi_nodo, nome, coda):
         )
         invia_richiesta(coda, "deploy", config_ricreata)
 
-    print(f"Il nodo {nome} aveva questi container attivi e verranno rischedulati: {container_attivi}")
+    print(f"\nFailure_detection> Il nodo {nome} aveva questi container attivi e verranno rischedulati: {container_attivi}")

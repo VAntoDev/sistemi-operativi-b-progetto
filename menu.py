@@ -1,6 +1,6 @@
 import time
 from manager import invia_richiesta
-from nodi import list_nodes, disponibilita_nodi
+from cluster import list_nodes, disponibilita_nodi
 from nodo import Nodo
 from utils import scegli_config
 
@@ -47,7 +47,7 @@ class Menu:
         while True:
             comando = input(f"\n---Menu Servizi---\nScegli una voce dal menù:\n"
                             f"1) Crea replica di 1 servizio\n"
-                            f"2) Scala N repliche di un servizio (da implementare)\n"
+                            f"2) Scala N repliche di un servizio\n"
                             f"3) Torna al Menu Principale\n")
             match comando:
                 case "1":
@@ -57,20 +57,41 @@ class Menu:
                     self.stampa_servizi()
                     # prende in input il servizio dell'utente
                     num_servizio = input("")
-                    servizio = self.servizi[int(num_servizio) - 1]
-                    # manda la richiesta al thread Manager così che lo scheduli sul nodo least loaded
-                    invia_richiesta(self.coda, "deploy", servizio)
+
+                    try:
+                        servizio = self.servizi[int(num_servizio) - 1]
+                        # manda la richiesta al thread Manager così che lo scheduli sul nodo least loaded
+                        invia_richiesta(self.coda, "deploy", servizio)
+                    except ValueError:
+                        print("Errore, inserisci un numero valido")
+                        continue
+                    except IndexError:
+                        print("Errore, numero di servizio non in lista")
+                        continue
 
                 case "2":
                     #alza, abbassa o azzera il numero di repliche di un servizio
                     print("Scegli quale servizio vuoi scalare")
                     self.stampa_servizi()
                     #prende in input il servizio dell'utente
-                    num_servizio = input("")
-                    servizio = self.servizi[int(num_servizio) - 1]
-                    num_repliche = input("Scegli il numero di repliche che vuoi avere per il servizio scelto\n")
-                    self.scala_repliche(int(num_repliche), servizio)
-                    pass
+                    try:
+                        num_servizio = input("")
+                        servizio = self.servizi[int(num_servizio) - 1]
+                        num_repliche = input("Scegli il numero di repliche che vuoi avere per il servizio scelto\n")
+
+                        num_repliche = int(num_repliche)
+                        if num_repliche < 0:
+                            print("Il numero di repliche non può essere negativo")
+                            continue
+
+                        self.scala_repliche(num_repliche, servizio)
+                    except ValueError:
+                        print("Errore, inserisci un numero valido")
+                        continue
+                    except IndexError:
+                        print("Errore, numero di servizio non in lista")
+                        continue
+
                 #torna al menu principale
                 case "3":
                     break
@@ -83,29 +104,25 @@ class Menu:
 
     def menu_stato_nodi(self):
         while True:
-            comando = input(f"\n---Menu Servizi---\nScegli una voce dal menù:\n"
+            comando = input(f"\n---Menu Stato Nodi---\nScegli una voce dal menù:\n"
                             f"1) Stampa stato e servizi attivi sui nodi\n"
                             f"2) Stampa stato e TUTTI i servizi sui nodi\n"
                             f"3) Svuota un nodo \n"
                             f"4) Attiva un nodo se è in DRAIN \n"
-                            f"5) Torna al Menu Principale")
+                            f"5) Torna al Menu Principale\n")
             match comando:
                 case "1":
                     #stampa stato dei nodi e i loro servizi attivi
                     list_nodes(self.lista_nodi, stampa=True)
                     nodi_non_attivi = disponibilita_nodi(self.lista_nodi, attivi=False)
                     if nodi_non_attivi:
-                        print("Nodi in stato di DRAIN: ")
-                        for nodo in nodi_non_attivi:
-                            print(nodo + ' ', end="")
+                        print("Nodi in stato di DRAIN:", " ".join(nodi_non_attivi))
                 case "2":
                     #stampa stato dei nodi e i servizi sia attivi che spenti
                     list_nodes(self.lista_nodi, stampa=True, tutti=True)
                     nodi_non_attivi = disponibilita_nodi(self.lista_nodi, attivi=False)
                     if nodi_non_attivi:
-                        print("Nodi in stato di DRAIN: ")
-                        for nodo in nodi_non_attivi:
-                            print(nodo + ' ', end="")
+                        print("Nodi in stato di DRAIN:", " ".join(nodi_non_attivi))
                 case "3":
                     #fa scegliere all'utente fra i nodi attivi uno da mettere in DRAIN, i suoi container verranno spostati sugli altri nodi
                     nodi_attivi = disponibilita_nodi(self.lista_nodi)
@@ -113,15 +130,19 @@ class Menu:
                     if not nodi_attivi:
                         print("Nessun nodo disponibile per il drain.")
                         continue
+                    try:
+                        print("Scegli quale nodo vuoi svuotare (andrà in stato di DRAIN)")
+                        for i, nome in enumerate(nodi_attivi, start=1):
+                            print(f"{i}) {nome}")
 
-                    print("Scegli quale nodo vuoi svuotare (andrà in stato di DRAIN)")
-                    for i, nome in enumerate(nodi_attivi, start=1):
-                        print(f"{i}) {nome}")
+                        num_nodo = input("")
+                        nome_nodo_scelto = nodi_attivi[int(num_nodo) - 1]
 
-                    num_nodo = input("")
-                    nome_nodo_scelto = nodi_attivi[int(num_nodo) - 1]
-
-                    invia_richiesta(self.coda, "drain_nodo", nome_nodo_scelto)
+                        invia_richiesta(self.coda, "drain_nodo", nome_nodo_scelto)
+                    except ValueError:
+                        print("Errore, inserisci un numero valido")
+                    except IndexError:
+                        print("Errore, numero di nodo non in lista")
                 case "4":
                     #fa scegliere all'utente fra i nodi in DRAIN da riattivare, da qui potrà riprendere richieste di deploy
                     nodi_non_attivi = disponibilita_nodi(self.lista_nodi, attivi=False)
@@ -133,11 +154,15 @@ class Menu:
                     print("Scegli quale nodo vuoi attivare (sarà di nuovo considerato per il deploy)")
                     for i, nome in enumerate(nodi_non_attivi, start=1):
                         print(f"{i}) {nome}")
+                    try:
+                        num_nodo = input("")
+                        nome_nodo_scelto = nodi_non_attivi[int(num_nodo) - 1]
 
-                    num_nodo = input("")
-                    nome_nodo_scelto = nodi_non_attivi[int(num_nodo) - 1]
-
-                    invia_richiesta(self.coda, "attiva_nodo", nome_nodo_scelto)
+                        invia_richiesta(self.coda, "attiva_nodo", nome_nodo_scelto)
+                    except ValueError:
+                        print("Errore, inserisci un numero valido")
+                    except IndexError:
+                        print("Errore, numero di nodo non in lista")
                 case "5":
                     break
 
@@ -147,8 +172,10 @@ class Menu:
 
     def aggiungi_config_servizio(self):
         nuova_config = scegli_config()
-        self.servizi.append(nuova_config)
-        pass
+
+        #se la configurazione era valida, allora la aggiunge alla lista
+        if nuova_config is not None:
+            self.servizi.append(nuova_config)
 
     def stampa_servizi(self):
         for i, servizio in enumerate(self.servizi, start=1):
@@ -187,4 +214,3 @@ class Menu:
 
         else:
             print(f"'{servizio.servizio_name}' ha già {num_repliche} repliche attive.")
-        pass
