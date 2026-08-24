@@ -1,33 +1,16 @@
+from config import Config
 from nodi import deploy_container, stop_container, remove_container
 from datetime import datetime, timezone, timedelta
 
-#SPOSTATO NELLA CLASSE Config
-def crea_config(image, command, name=None):
-    config= {
-        "image": image,
-        "command": command,
-        "detach": True, #Sempre True, i container devono runnare in background
-    }
-
-    if name is not None:
-        config["name"] = name
-
-    return config
-
-#da SPOSTARE NELLA CLASSE Config
+#crea una Config personalizzata dall'utente
 def scegli_config():
     #SOLO TEST, così non runno immagini che non voglio scaricare
-    immagine = input("Che immagine vuoi usare? \n1) hello-world, \n2) alpine\n")
-    if immagine == "1":
-        immagine = "hello-world"
-    elif immagine == "2":
-        immagine = "alpine"
-    else:
-        print("Inserisci un numero di immagine valido.")
-        return 0
+    immagine = input("Che immagine vuoi usare? Scrivi il nome dell'immagine esistente di cui fare il pull\n")
+
+    servizio_name = input("Che nome vuoi dare a questo servizio custom? (Non usare nomi con il trattino '-'\n")
 
     comando = input("Che comando vuoi usare sul container? Lascia vuoto per nessun comando\n")
-    return crea_config(immagine, comando)
+    return Config(immagine, servizio_name, command=comando)
 
 #solo di testing, poi verrà rimossa
 def scelta_deploy_container(nodo):
@@ -40,7 +23,7 @@ def scelta_stop_container(lista_nodi, lista_nodi_containers):
     for nome_nodo, containers in lista_nodi_containers.items():
         print("\nNodo:", nome_nodo)
         for i, container in enumerate(containers):
-            print(f"{i})" + f"{container["nome"]}" + f"{container["immagine"]}")
+            print(f"{i}) {container['nome']} {container['immagine']}")
 
     #chiedo all'utente di quale nodo vuole fermare il container
     nome_nodo = input("Di quale nodo vuoi FERMARE un container? (Inserisci il nome del nodo)\n")
@@ -61,7 +44,7 @@ def scelta_remove_container(lista_nodi, lista_nodi_containers):
     for nome_nodo, containers in lista_nodi_containers.items():
         print("\nNodo:", nome_nodo)
         for i, container in enumerate(containers):
-            print(f"{i})" + f"{container["nome"]}" + f"{container["immagine"]}" + f"{container["status"]}")
+            print(f"{i}) {container['nome']} {container['immagine']} {container['status']}")
 
     #chiedo all'utente di quale nodo vuole rimuovere il container
     nome_nodo = input("Di quale nodo vuoi RIMUOVERE un container? (Inserisci il nome del nodo)\n")
@@ -82,8 +65,3 @@ def is_container_vecchio(container, soglia_minuti=1):
     creato = datetime.fromisoformat(container.attrs["Created"].replace("Z", "+00:00"))
     eta = datetime.now(timezone.utc) - creato
     return eta > timedelta(minutes=soglia_minuti)
-
-#mostra i config di un servizio in modo ordinato (capire se implementare o no)
-def mostra_config(servizio):
-
-    pass

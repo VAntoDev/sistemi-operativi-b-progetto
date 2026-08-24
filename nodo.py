@@ -16,6 +16,9 @@ class Nodo:
             self.client = None
         #serve tenerne traccia per rilanciare i container del nodo in un altro nodo in caso di crash
         self.container_attivi = {}
+        #il nodo inizia da disponibile, nel caso in cui si voglia svuotare il nodo e non usarlo (per manutenzione)
+        #questa variabile verrà impostata a False
+        self.disponibile = True
 
     #controlla se il nodo è attivo o spento, nel caso in cui sia spento prova a riconnettersi
     def is_up(self):
@@ -32,6 +35,9 @@ class Nodo:
         except Exception:
             return False
 
+    def is_disponibile(self):
+        return self.disponibile
+
     #In questo file metto le funzioni che rigurdano la gestione dei container all'interno dei nodi, include le operazioni
     #eseguite all'interno di un nodo dal nodo worker
 
@@ -40,10 +46,12 @@ class Nodo:
         try:
             info_totali = []
             for container in self.client.containers.list():
+                comando = container.attrs["Config"]["Cmd"]
                 info_totali.append({
                     "nome": container.name,
                     "id": container.short_id,
                     "immagine": container.image.tags[0] if container.image.tags else "nessun tag",
+                    "comando": " ".join(comando) if comando else None
                 })
             self.container_attivi = info_totali
             return info_totali

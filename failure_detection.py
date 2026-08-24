@@ -2,6 +2,7 @@
 import threading
 import time
 
+from config import Config
 from manager import invia_richiesta
 from nodo import Nodo
 
@@ -10,24 +11,35 @@ stato_nodi = {}
 #controlla lo stato dei nodi, se un nodo cade attiva il failover
 def heartbeat(lista_nodi, coda, intervallo=5):
     while True:
-        for nome, nodo in lista_nodi.items():
-            stato_nodi[nome] = nodo.is_up()
-            if stato_nodi[nome] == False:
-                failover(nodo.container_attivi, nodo.nome, coda)
-        #print(stato_nodi)
+        try:
+            for nome, nodo in lista_nodi.items():
+                stato_nodi[nome] = nodo.is_up()
+                if stato_nodi[nome] == False:
+                    failover(nodo.container_attivi, nodo.nome, coda)
+            #print(stato_nodi)
+        except Exception as e:
+            print(f"Errore nel thread heartbeat: {e}")
         time.sleep(intervallo)
 
 #questa funzione runna i container che erano sul nodo caduto sugli altri container, passandoli nella coda del manager
 def failover(container_attivi_nodo, nome, coda):
-    #creo una copia dei container attivi, in questo modo posso subito fare clear della lista e non rischedula quei container attivi di nuovo
+    #prende i container che erano attivi sul nodo come copia
     container_attivi = list(container_attivi_nodo)
-    #clear della lista
     container_attivi_nodo.clear()
-    if len(container_attivi)==0:
-        #print("Il nodo non aveva container attivi, non sposto nulla")
+
+    #se il nodo NON aveva container attivi, allora non fare nulla
+    if len(container_attivi) == 0:
         return
 
-    #se il container era nella lista container attivi allora manda una richiesta al manager di rischedularlo
+    #se aveva dei container attivi allora ricrea la config e falla deployare al manager
     for container in container_attivi:
-        invia_richiesta(coda, container["immagine"])
-    print("Il nodo " + f'{nome}' + " aveva questi container attivi e verranno rischedulati: ", container_attivi)
+        servizio_name = container["nome"].split("-")[0]
+        config_ricreata = Config(
+            image=container["immagine"],
+            #mi serve solo servizio_name, poi quando il manager fa il deploy darà al container un suo uuid univoco
+            servizio_name=servizio_name,
+            command=container["comando"]
+        )
+        invia_richiesta(coda, "deploy", config_ricreata)
+
+    print(f"Il nodo {nome} aveva questi container attivi e verranno rischedulati: {container_attivi}")

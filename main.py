@@ -4,11 +4,9 @@ import time
 
 import failure_detection
 from config import Config
-from manager import manager, invia_richiesta
+from manager import manager
 from menu import Menu
-from nodi import list_nodes, deploy_container, stop_container
 from nodo import Nodo
-from utils import scelta_deploy_container, scelta_stop_container, scelta_remove_container
 
 if __name__ == '__main__':
     #creo un oggetto Nodo per ogni nodo del cluster,
@@ -18,6 +16,12 @@ if __name__ == '__main__':
         "nodo2": Nodo("nodo2", "172.21.0.3"),
         "nodo3": Nodo("nodo3", "172.21.0.4"),
     }
+
+    # per ora, elenco dei servizi validi (per evitare di scaricare immagini troppo pesanti sui container accidentalmente)
+    servizi_validi = [
+        Config("alpine", servizio_name="alpine.sleep", command="sleep infinity"),
+        Config(image="hello-world", servizio_name="basic.hello.world"),
+    ]
 
     #l'oggetto "queue" è una coda thread-safe, in questo modo posso usare una risorsa condivisa tra i thread
     #senza preoccuparmi di incappare in una race condition
@@ -32,12 +36,6 @@ if __name__ == '__main__':
     #creo un thread che si occupa di controllare se i nodi sono caduti per gestire il problema
     thread_failure_detection = threading.Thread(target=failure_detection.heartbeat, args=(lista_nodi, coda, 5), daemon=True)
     thread_failure_detection.start()
-
-    #per ora, elenco dei servizi validi (per evitare di scaricare immagini troppo pesanti sui container accidentalmente)
-    servizi_validi = [
-        Config("alpine", "sleep infinity"),
-        Config(image="hello-world")
-    ]
 
     menu = Menu(lista_nodi, coda, servizi_validi)
     menu.avvia_menu()

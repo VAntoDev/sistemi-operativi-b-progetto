@@ -1,7 +1,8 @@
 import time
 from manager import invia_richiesta
-from nodi import list_nodes
+from nodi import list_nodes, disponibilita_nodi
 from nodo import Nodo
+from utils import scegli_config
 
 
 class Menu:
@@ -27,7 +28,8 @@ class Menu:
                 #menu stato nodi
                 case "2":
                     self.menu_stato_nodi()
-                #menu amministratore
+                #per aggiungere un nuovo servizio specificando immagine e comando:
+                #(ho scelto alpine e hello-world come config di default, le altre vanno pullate e questo permette di salvarle)
                 case "3":
                     self.aggiungi_config_servizio()
                 #exit normale, attende che la coda abbia terminato di eseguire il container prima di chiudersi
@@ -39,45 +41,38 @@ class Menu:
                     break
                 case _:
                     print("Opzione non valida, metti un numero tra quelli nel menù.")
-            time.sleep(3)
+            time.sleep(1)
 
     def menu_servizi(self):
         while True:
             comando = input(f"\n---Menu Servizi---\nScegli una voce dal menù:\n"
                             f"1) Crea replica di 1 servizio\n"
                             f"2) Scala N repliche di un servizio (da implementare)\n"
-                            f"3) Rimuovi replica di 1 servizio (da implementare)\n"
-                            f"4) Rimuove tutte le repliche di 1 servizio (da implementare)\n"
-                            f"5) Mostra status di 1 servizio sui nodi (da implementare)\n"
-                            f"6) Torna al Menu Principale\n")
+                            f"3) Torna al Menu Principale\n")
             match comando:
                 case "1":
                     # crea 1 replica di un servizio
                     print("Scegli quale servizio avviare tra quelli disponibili:")
                     # stampa i servizi disponibili
-                    for i, servizio in enumerate(self.servizi, start=1):
-                        print(f"{i}) ", end="")
-                        servizio.stampa_config()
+                    self.stampa_servizi()
                     # prende in input il servizio dell'utente
                     num_servizio = input("")
                     servizio = self.servizi[int(num_servizio) - 1]
                     # manda la richiesta al thread Manager così che lo scheduli sul nodo least loaded
-                    invia_richiesta(self.coda, servizio)
+                    invia_richiesta(self.coda, "deploy", servizio)
 
                 case "2":
+                    #alza, abbassa o azzera il numero di repliche di un servizio
+                    print("Scegli quale servizio vuoi scalare")
+                    self.stampa_servizi()
+                    #prende in input il servizio dell'utente
+                    num_servizio = input("")
+                    servizio = self.servizi[int(num_servizio) - 1]
+                    num_repliche = input("Scegli il numero di repliche che vuoi avere per il servizio scelto\n")
+                    self.scala_repliche(int(num_repliche), servizio)
                     pass
-
-                case "3":
-                    pass
-
-                case "4":
-                    pass
-
-                case "5":
-                    pass
-
                 #torna al menu principale
-                case "6":
+                case "3":
                     break
 
                 case _:
@@ -91,19 +86,59 @@ class Menu:
             comando = input(f"\n---Menu Servizi---\nScegli una voce dal menù:\n"
                             f"1) Stampa stato e servizi attivi sui nodi\n"
                             f"2) Stampa stato e TUTTI i servizi sui nodi\n"
-                            f"3) Svuota un nodo (da implementare)\n"
-                            f"4) Torna al Menu Principale\n")
+                            f"3) Svuota un nodo \n"
+                            f"4) Attiva un nodo se è in DRAIN \n"
+                            f"5) Torna al Menu Principale")
             match comando:
                 case "1":
                     #stampa stato dei nodi e i loro servizi attivi
                     list_nodes(self.lista_nodi, stampa=True)
+                    nodi_non_attivi = disponibilita_nodi(self.lista_nodi, attivi=False)
+                    if nodi_non_attivi:
+                        print("Nodi in stato di DRAIN: ")
+                        for nodo in nodi_non_attivi:
+                            print(nodo + ' ', end="")
                 case "2":
                     #stampa stato dei nodi e i servizi sia attivi che spenti
                     list_nodes(self.lista_nodi, stampa=True, tutti=True)
+                    nodi_non_attivi = disponibilita_nodi(self.lista_nodi, attivi=False)
+                    if nodi_non_attivi:
+                        print("Nodi in stato di DRAIN: ")
+                        for nodo in nodi_non_attivi:
+                            print(nodo + ' ', end="")
                 case "3":
-                    pass
+                    #fa scegliere all'utente fra i nodi attivi uno da mettere in DRAIN, i suoi container verranno spostati sugli altri nodi
+                    nodi_attivi = disponibilita_nodi(self.lista_nodi)
 
+                    if not nodi_attivi:
+                        print("Nessun nodo disponibile per il drain.")
+                        continue
+
+                    print("Scegli quale nodo vuoi svuotare (andrà in stato di DRAIN)")
+                    for i, nome in enumerate(nodi_attivi, start=1):
+                        print(f"{i}) {nome}")
+
+                    num_nodo = input("")
+                    nome_nodo_scelto = nodi_attivi[int(num_nodo) - 1]
+
+                    invia_richiesta(self.coda, "drain_nodo", nome_nodo_scelto)
                 case "4":
+                    #fa scegliere all'utente fra i nodi in DRAIN da riattivare, da qui potrà riprendere richieste di deploy
+                    nodi_non_attivi = disponibilita_nodi(self.lista_nodi, attivi=False)
+
+                    if not nodi_non_attivi:
+                        print("Nessun nodo è in stato di DRAIN.")
+                        continue
+
+                    print("Scegli quale nodo vuoi attivare (sarà di nuovo considerato per il deploy)")
+                    for i, nome in enumerate(nodi_non_attivi, start=1):
+                        print(f"{i}) {nome}")
+
+                    num_nodo = input("")
+                    nome_nodo_scelto = nodi_non_attivi[int(num_nodo) - 1]
+
+                    invia_richiesta(self.coda, "attiva_nodo", nome_nodo_scelto)
+                case "5":
                     break
 
                 case _:
@@ -111,29 +146,45 @@ class Menu:
             time.sleep(1)
 
     def aggiungi_config_servizio(self):
+        nuova_config = scegli_config()
+        self.servizi.append(nuova_config)
         pass
 
-def VECCHIO_avvia_menu(lista_nodi, coda, servizi_validi):
-    # menu per l'utente così può specificare che servizio vuole fare runnare
-    while True:
-        comando = input(f"---\nManda un servizio da schedulare ('exit' per uscire, 'stampa' per stampare i nodi con container attuali): \nServizi disponibili: {servizi_validi}\n")
-        # uscita forzata dal programma, senza aspettare che il manager abbia finito con la coda.
-        if comando == "exit forzata":
-            break
-        # uscita "soft" dal programma, aspetta che il manager finisca le richieste in coda prima di chiudersi
-        if comando == "exit":
-            # blocca l'esecuzione finché il manager non ha finito tutto quello che c'era in coda (tracciato da task_done)
-            coda.join()
-            break
-        if comando == "stampa":
-            list_nodes(lista_nodi, stampa=True)
-            continue
-        if comando == "stampa_spenti":
-            list_nodes(lista_nodi, tutti=True, stampa=True)
-        if comando not in servizi_validi:
-            print("Comando o servizio non disponibile, riprova con uno dei comandi/servizi specificati sopra.")
-            continue
-        # invia la richiesta all'oggetto "coda", condiviso con il thread manager
-        invia_richiesta(coda, comando)
-        # per printare di nuovo la richiesta di input dopo l'operazione aspetta 3 secondi (posso sostituirlo dopo con un .join() )
-        time.sleep(3)
+    def stampa_servizi(self):
+        for i, servizio in enumerate(self.servizi, start=1):
+            print(f"{i}) ", end="")
+            servizio.stampa_config()
+
+    #conta quanti container di un certo servizio sono attivi su TUTTI i nodi, ritorna quel totale
+    def conta_repliche(self, servizio):
+        lista_nodi_stats = list_nodes(self.lista_nodi)
+        totale = 0
+        for nome_nodo, containers in lista_nodi_stats.items():
+            for c in containers:
+                #riconosce i servizi in base al nome che gli è stato dato al deploy
+                if c["nome"].startswith(servizio.servizio_name):
+                    totale += 1
+        return totale
+
+    def scala_repliche(self, num_repliche, servizio):
+        #ottengo info sul numero di repliche di quel servizio attualmente
+        repliche_attuali = self.conta_repliche(servizio)
+        #controllo la differenza fra quelle che vuole l'utente e quelle attuali
+        differenza = num_repliche - repliche_attuali
+
+        #se la differenza è un numero positivo, allora l'utente vuole aumentare il numero di repliche quindi deploy
+        if differenza > 0:
+            #servono più repliche quindi manda "differenza" richieste di deploy
+            for _ in range(differenza):
+                invia_richiesta(self.coda, "deploy", servizio)
+            print(f"Richieste {differenza} nuove repliche di '{servizio.servizio_name}'")
+
+        elif differenza < 0:
+            #ci sono troppe repliche quindi manda "abs(differenza)" richieste di scale_down
+            for _ in range(-differenza):
+                invia_richiesta(self.coda, "scale_down", servizio)
+            print(f"Richieste {-differenza} rimozioni di repliche di '{servizio.servizio_name}'")
+
+        else:
+            print(f"'{servizio.servizio_name}' ha già {num_repliche} repliche attive.")
+        pass
