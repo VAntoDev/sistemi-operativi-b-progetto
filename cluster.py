@@ -1,4 +1,4 @@
-#In questo file metto tutte le funzioni che riguardano la gestione dei nodi, include le operazioni eseguite all'esterno
+#questo file contiene le funzioni che riguardano la gestione dei nodi, include le operazioni eseguite all'esterno
 #di un nodo dal nodo manager
 
 import docker
@@ -6,12 +6,13 @@ from docker.errors import DockerException
 
 #stampa lo stato attuale di tutti i nodi, con anche i loro container attivi
 def list_nodes(nodi, tutti=False, stampa=False):
-    # lista dei container attivi per ogni nodo
+    #lista dei container attivi per ogni nodo
     diz_nodo_containers = {}
     for nome, nodo in nodi.items():
         #controlla se il nodo è attivo o spento
         stato = nodo.is_up()
-
+        #se il nodo è attivo, controllo se si vuole ritornare la lista di tutti i container o solo di quelli attivi
+        #inoltre viene controllato se si vuole attivare la stmmpa della lista o meno
         if stato:
             if tutti == False:
                 info_containers = nodo.info_container_attivi()
@@ -31,7 +32,7 @@ def list_nodes(nodi, tutti=False, stampa=False):
                         for attributo, valore in container.items():
                             print(attributo, ':', valore, "| ", end="")
                         print()
-                # aggiunge le informazioni alla lista dei containers attivi di ogni nodo
+                #aggiunge le informazioni alla lista dei containers attivi di ogni nodo
                 diz_nodo_containers[nome] = info_containers
         else:
             print(f"{nome} | {'UP' if stato else 'DOWN'}")
@@ -53,13 +54,14 @@ def deploy_container(nodo, config):
         nodo.client.containers.run(**config)
         print(f"\nInfo> Container: {config['image']} deployato (run) sul nodo: {nodo.nome}")
     except Exception as e:
-        #può dare errore se prova a startare un container con un nome già esistente sul nodo, è possibile succeda ma molto poco probabile
+        #può dare errore se non c'è internet o prova a startare un container con un nome già esistente sul nodo, quest'ultimo è possibile succeda ma molto poco probabile
         print("Errore nel deploy del container: ", e)
 
 #ferma un container dato il suo nodo e il suo id
 def stop_container(nodo, id_container):
     try:
-        nodo.client.containers.get(id_container).stop() #stop attende che il processo termini, per questo può volerci un po' per chiudere il container
+        #stop attende che il processo termini, per questo può volerci un po' per chiudere il container
+        nodo.client.containers.get(id_container).stop()
         print("\nInfo> Un container sul nodo " + f'{nodo.nome}' + " è stato fermato\n")
     except Exception as e:
         print("Errore nello stop del container: ", e)
@@ -67,7 +69,8 @@ def stop_container(nodo, id_container):
 #rimuove un container dato il suo nodo e il suo id
 def remove_container(nodo, id_container):
     try:
-        nodo.client.containers.get(id_container).remove() #ricorda, per rimuovere il container deve prima essere spento
+        #per rimuovere il container deve prima essere spento
+        nodo.client.containers.get(id_container).remove()
         print("\nInfo> Un container sul nodo " + f'{nodo.nome}' + " è stato rimosso\n")
     except Exception as e:
         print("Errore nella rimozione del container, controlla che fosse spento. Errore: ", e)

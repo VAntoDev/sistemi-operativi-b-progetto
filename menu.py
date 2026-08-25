@@ -1,3 +1,4 @@
+#questa classe gestisce il Menu mostrato all'utente
 import time
 from manager import invia_richiesta
 from cluster import list_nodes, disponibilita_nodi
@@ -29,7 +30,7 @@ class Menu:
                 case "2":
                     self.menu_stato_nodi()
                 #per aggiungere un nuovo servizio specificando immagine e comando:
-                #(ho scelto alpine e hello-world come config di default, le altre vanno pullate e questo permette di salvarle)
+                #(ho scelto alpine e hello-world come config di default, le altre aggiunte dall'utente vanno pullate per ogni nodo)
                 case "3":
                     self.aggiungi_config_servizio()
                 #exit normale, attende che la coda abbia terminato di eseguire il container prima di chiudersi
@@ -171,6 +172,7 @@ class Menu:
             time.sleep(1)
 
     def aggiungi_config_servizio(self):
+        #faccio scegliere all'utente una nuova configurazione, ovvero immagine comando e nome del servizio
         nuova_config = scegli_config()
 
         #se la configurazione era valida, allora la aggiunge alla lista

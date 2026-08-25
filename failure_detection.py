@@ -1,10 +1,8 @@
-#in questo file ci sono la Failure Detection tramite Heartbeat per controllare se un nodo cade + il Failover per i suoi container su altri nodi attivi
-
+#thread heartbeat. Si occupa dela Failure Detection, controlla se un nodo cade + fa il Failover per i suoi container su altri nodi attivi
 import time
 
 from config import Config
 from manager import invia_richiesta
-
 
 #controlla lo stato dei nodi, se un nodo cade attiva il failover
 def heartbeat(lista_nodi, coda, intervallo=3):

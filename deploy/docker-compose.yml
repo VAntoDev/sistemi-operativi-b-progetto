@@ -1,0 +1,51 @@
+services:
+  nodo1avo:
+    #i container DinD rappresentano i nodi del sistema distribuito
+    image: docker:dind
+    #i nodi DinD hanno bisogno di privileged: true per poter eseguire demone Docker
+    privileged: true
+    container_name: nodo1avo
+    #disabilita la generazione del TLS così che il nodo-manager possa mandare comandi senza usare certificati
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    networks:
+      - rete-cluster-avo
+
+  nodo2avo:
+    image: docker:dind
+    privileged: true
+    container_name: nodo2avo
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    networks:
+      - rete-cluster-avo
+
+  nodo3avo:
+    image: docker:dind
+    privileged: true
+    container_name: nodo3avo
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    networks:
+      - rete-cluster-avo
+  #è il nodo su cui viene eseguito l'orchestratore, che gestisce i nodi worker
+  nodo-manager-avo:
+    #crea l'immagine dell'orchestratore usando il Dockerfile che ho creato per questo container, che srà il nodo manager della rete
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: nodo-manager-avo
+    #voglio che avvii gli altri nodi prima dell'orchestratore
+    depends_on:
+      - nodo1avo
+      - nodo2avo
+      - nodo3avo
+    networks:
+      - rete-cluster-avo
+    #uso queste due linee per fare avviare la shell interattiva da cui può interagire l'utente quando viene avviato il container con il codice
+    stdin_open: true
+    tty: true
+
+networks:
+  rete-cluster-avo:
+    name: rete-cluster-avo

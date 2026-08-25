@@ -1,3 +1,4 @@
+#thread Manager, si occupa di avviare le azioni che possono essere messe in coda: deploy, scale_down, drain_nodo, attiva_nodo
 import time
 import queue
 import uuid
@@ -68,7 +69,7 @@ def attiva_nodo(nome_nodo, lista_nodi):
     lista_nodi[nome_nodo].disponibile = True
     print(f"\nManager> Nodo {nome_nodo} attivato, torna a poter ricevere nuovi container.")
 
-#rimuove i container spenti su un nodo
+#rimuove i container spenti su UN nodo
 def rimuovi_container_spenti(node):
     rimossi = []
     for container in node.client.containers.list(all=True):
@@ -96,7 +97,8 @@ def rimuovi_container_spenti(node):
 def rimuovi_container_spenti_tutti_nodi(lista_nodi):
     for nome, nodo in lista_nodi.items():
         stato = nodo.is_up()
-        if stato: # se il nodo è attivo, allora rimuovi i container spenti al suo interno
+        #rimuove i container spenti solo se il nodo è attivo
+        if stato:
             rimuovi_container_spenti(nodo)
         else:
             #print(f"{nome} è down, salto la pulizia")
@@ -122,16 +124,14 @@ def schedula_servizio(config, lista_nodi, lista_nodi_stats):
     if nodo_least_loaded is None:
         print("Manager> Nessun nodo disponibile per il deploy.")
         return
-
     #esegue il container nel nodo con meno container attivi
     deploy_container(lista_nodi[nodo_least_loaded], config_diz)
 
 #ritorna solo i nodi + containers dei nodi che contengono quello specifico servizio
 def nodi_con_servizio(servizio, lista_nodi_stats):
     nodi_stats_con_servizio = {}
-    #controlla in tutti i nodi
+    #controlla in tutti i nodi e in ogni container
     for nome, containers in lista_nodi_stats.items():
-        #in ogni container
         for container in containers:
             #controlla se il nome inizia con quello del servizio desiderato
             if container["nome"].startswith(servizio.servizio_name):
@@ -155,7 +155,7 @@ def spegni_servizio(servizio, lista_nodi, lista_nodi_stats):
     #trova il nodo most_loaded SOLO tra i nodi che contengono quel servizio
     nodo_most_loaded = trova_nodo_most_loaded(nodi_stats_con_servizio)
 
-    # se trova_nodo_most_loaded ha ritornano None vuol dire che nessun nodo era attivo
+    #se trova_nodo_most_loaded ha ritornano None vuol dire che nessun nodo era attivo
     if nodo_most_loaded is None:
         print("Manager> Nessun nodo attivo su cui fermare il servizio")
         return

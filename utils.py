@@ -1,10 +1,13 @@
+#funzioni generiche
 from config import Config
 from datetime import datetime, timezone, timedelta
 
-#crea una Config personalizzata dall'utente,
+#fa personalizzare all'utente le impostazioni di un oggetto Config e lo crea
 def scegli_config():
-    immagine = input("Che immagine vuoi usare? Scrivi il nome dell'immagine esistente di cui fare il pull\n")
+    immagine = input("Che immagine vuoi usare? Scrivi il nome di un immagine esistente di cui ogni nodo potrà fare il pull\n")
 
+    #il nome del servizio è usato dall'utente per riconoscere i servizi che può lanciare, viene anche usato
+    #nella creazione del nome del container (insieme ad un uuid) per renderli riconoscibili quando vengono stampati/usati
     servizio_name = input("Che nome vuoi dare a questo servizio custom? (Non usare nomi con il trattino '-'\n")
 
     #se l'utente ha inserito un nome con "-" non faccio usare la configurazione

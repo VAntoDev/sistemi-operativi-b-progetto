@@ -1,6 +1,5 @@
 import queue
 import threading
-import time
 
 import failure_detection
 from config import Config
@@ -12,17 +11,19 @@ if __name__ == '__main__':
     #creo un oggetto Nodo per ogni nodo del cluster,
     #l'attributo "client" è un oggetto DockerClient che viene usato per comunicare con quel nodo
     lista_nodi = {
-        "nodo1": Nodo("nodo1", "172.21.0.2"),
-        "nodo2": Nodo("nodo2", "172.21.0.3"),
-        "nodo3": Nodo("nodo3", "172.21.0.4"),
+        #in fase di testing ho usato un ip statico, adesso che è su nodo-manager posso usare il DNS
+        #per tornare ad usare il programma dall'esterno di docker è necessario
+        #cambiare gli ip: 172.21.0.2, 172.21.0.3, 172.21.0.4 (o gli ip attuali dei nodi docker se non sono questi descritti)
+        "nodo1": Nodo("nodo1", "nodo1avo"),
+        "nodo2": Nodo("nodo2", "nodo2avo"),
+        "nodo3": Nodo("nodo3", "nodo3avo"),
     }
 
-    # per ora, elenco dei servizi validi (per evitare di scaricare immagini troppo pesanti sui container accidentalmente)
+    #elenco dei servizi validi (per evitare di scaricare immagini troppo pesanti sui container accidentalmente)
     servizi_validi = [
         Config("alpine", servizio_name="alpine.sleep", command="sleep infinity"),
         Config(image="hello-world", servizio_name="basic.hello.world"),
     ]
-
     #l'oggetto "queue" è una coda thread-safe, in questo modo posso usare una risorsa condivisa tra i thread
     #senza preoccuparmi di incappare in una race condition
     coda = queue.Queue()

@@ -1,3 +1,4 @@
+#usata per definre i servizi che possono essere eseguiti dall'orchestratore
 class Config:
     def __init__(self, image, servizio_name, command=None, name=None):
         self.image = image

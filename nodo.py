@@ -1,7 +1,8 @@
+#questa classe tiene traccia delle informazioni dei singoli nodi worker e
+#i metodi che riguarano la gestione dei container all'interno dei nodi
 import docker
 from docker.errors import DockerException
 
-#questa classe tiene traccia delle informazioni del singolo nodo
 class Nodo:
     def __init__(self, nome, ip, timeout=3):
         self.nome = nome
@@ -38,9 +39,6 @@ class Nodo:
 
     def is_disponibile(self):
         return self.disponibile
-
-    #In questo file metto le funzioni che rigurdano la gestione dei container all'interno dei nodi, include le operazioni
-    #eseguite all'interno di un nodo dal nodo worker
 
     #ritorna info solo dei container attivi su questo nodo
     def info_container_attivi(self):
