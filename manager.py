@@ -7,6 +7,7 @@ from docker.errors import DockerException
 
 from config import Config
 from cluster import list_nodes, deploy_container, stop_container
+from nodo import Nodo
 
 from utils import is_container_vecchio
 
@@ -63,11 +64,11 @@ def disattiva_svuota_nodo(nome_nodo, lista_nodi, coda):
         #ferma il container attuale, ora che è stato schedulato per essere deployato dal manager su altri nodi
         stop_container(nodo, container["id"])
 
-    print(f"\nManager> Nodo {nome_nodo} svuotato: {len(containers_da_spostare)} container rischedulati altrove.")
+    print(f"\nManager> Nodo {nome_nodo} svuotato: {len(containers_da_spostare)} task rischedulati altrove.")
 
 def attiva_nodo(nome_nodo, lista_nodi):
     lista_nodi[nome_nodo].disponibile = True
-    print(f"\nManager> Nodo {nome_nodo} attivato, torna a poter ricevere nuovi container.")
+    print(f"\nManager> Nodo {nome_nodo} attivato, torna a poter ricevere nuovi task.")
 
 #rimuove i container spenti su UN nodo
 def rimuovi_container_spenti(node):
@@ -90,7 +91,7 @@ def rimuovi_container_spenti(node):
             except (DockerException, Exception) as e:
                 print(f"Manager> Errore rimuovendo {nome}: {e}")
     if rimossi: #se rimossi ha elementi allora runna il print, altrimenti no perché non ci sono stati container da rimuovere
-        print(f"Manager> Container già spenti rimossi su {node.nome}: {rimossi}")
+        print(f"Manager> Task già spenti rimossi su {node.nome}: {rimossi}")
     return rimossi
 
 #data una lista di nodi, su ognuno di essi esegue "rimuovi_container_spenti" se è attivo
@@ -168,7 +169,7 @@ def spegni_servizio(servizio, lista_nodi, lista_nodi_stats):
 
     #se non esiste un container di quel servizio sul nodo, allora non mandare lo stop_container
     if id_container is None:
-        print(f"Manager> Nessun container del servizio '{servizio.servizio_name}' trovato su {nodo_most_loaded}")
+        print(f"Manager> Nessun task del servizio '{servizio.servizio_name}' trovato su {nodo_most_loaded}")
         return
 
     #spegne il servizio su quel nodo
@@ -189,8 +190,9 @@ def manager(lista_nodi, coda):
             richiesta = coda.get(timeout=1)
             #da qui parte ad elaborare la richiesta
             try:
-                print(f"\nManager> Schedulo ", richiesta["azione"], " ==> " , end="")
+                print(f"\nManager> Schedulo ", richiesta["azione"], ' ', end="")
                 if isinstance(richiesta["target"], Config):
+                    print(" ==> ", end='')
                     richiesta["target"].stampa_config()
                 #l'azione può essere: deploy, scale_down, drain_nodo (che lo disattiva nel farlo), attiva_nodo
                 azione = richiesta["azione"]

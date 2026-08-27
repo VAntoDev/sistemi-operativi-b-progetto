@@ -21,7 +21,7 @@ class Menu:
                             f"2) Menu - Stato Nodi\n"
                             f"3) Aggiungi Configurazione Servizio\n"
                             f"4) Uscita\n"
-                            f"5) Uscita Forzata (senza finire di avviare i container in coda)\n")
+                            f"5) Uscita Forzata (senza finire di gestire le richieste in coda)\n")
             match scelta:
                 #menu servizi
                 case "1":
@@ -106,8 +106,8 @@ class Menu:
     def menu_stato_nodi(self):
         while True:
             comando = input(f"\n---Menu Stato Nodi---\nScegli una voce dal menù:\n"
-                            f"1) Stampa stato e servizi attivi sui nodi\n"
-                            f"2) Stampa stato e TUTTI i servizi sui nodi\n"
+                            f"1) Stampa stato e task attivi sui nodi\n"
+                            f"2) Stampa stato e task attivi e spenti sui nodi\n"
                             f"3) Svuota un nodo \n"
                             f"4) Attiva un nodo se è in DRAIN \n"
                             f"5) Torna al Menu Principale\n")

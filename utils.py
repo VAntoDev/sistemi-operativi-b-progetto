@@ -8,7 +8,7 @@ def scegli_config():
 
     #il nome del servizio è usato dall'utente per riconoscere i servizi che può lanciare, viene anche usato
     #nella creazione del nome del container (insieme ad un uuid) per renderli riconoscibili quando vengono stampati/usati
-    servizio_name = input("Che nome vuoi dare a questo servizio custom? (Non usare nomi con il trattino '-'\n")
+    servizio_name = input("Che nome vuoi dare a questo servizio custom? (Non usare nomi con il trattino '-')\n")
 
     #se l'utente ha inserito un nome con "-" non faccio usare la configurazione
     if "-" in servizio_name:

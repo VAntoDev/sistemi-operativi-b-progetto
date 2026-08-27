@@ -17,7 +17,7 @@ def list_nodes(nodi, tutti=False, stampa=False):
             if tutti == False:
                 info_containers = nodo.info_container_attivi()
                 if stampa == True:
-                    print(f"\n{nome} | {'UP' if stato else 'DOWN'} | Servizi attivi(" + f'{len(info_containers)}' + "): ")
+                    print(f"\n{nome} | {'UP' if stato else 'DOWN'} | Task attivi(" + f'{len(info_containers)}' + "): ")
                     for container in info_containers:
                         for attributo, valore in container.items():
                             print(attributo, ':', valore, "| ", end="")
@@ -27,7 +27,7 @@ def list_nodes(nodi, tutti=False, stampa=False):
             else:
                 info_containers = nodo.info_container_spenti_e_attivi()
                 if stampa == True:
-                    print(f"\n{nome} | {'UP' if stato else 'DOWN'} | Servizi spenti e attivi(" + f'{len(info_containers)}' + "): ")
+                    print(f"\n{nome} | {'UP' if stato else 'DOWN'} | Task spenti e attivi(" + f'{len(info_containers)}' + "): ")
                     for container in info_containers:
                         for attributo, valore in container.items():
                             print(attributo, ':', valore, "| ", end="")
@@ -52,25 +52,25 @@ def disponibilita_nodi(nodi, attivi=True):
 def deploy_container(nodo, config):
     try:
         nodo.client.containers.run(**config)
-        print(f"\nInfo> Container: {config['image']} deployato (run) sul nodo: {nodo.nome}")
+        print(f"\nInfo> Task: {config['image']} deployato (run) sul nodo: {nodo.nome}")
     except Exception as e:
         #può dare errore se non c'è internet o prova a startare un container con un nome già esistente sul nodo, quest'ultimo è possibile succeda ma molto poco probabile
-        print("Errore nel deploy del container: ", e)
+        print("Errore nel deploy del task: ", e)
 
 #ferma un container dato il suo nodo e il suo id
 def stop_container(nodo, id_container):
     try:
         #stop attende che il processo termini, per questo può volerci un po' per chiudere il container
         nodo.client.containers.get(id_container).stop()
-        print("\nInfo> Un container sul nodo " + f'{nodo.nome}' + " è stato fermato\n")
+        print("\nInfo> Un task sul nodo " + f'{nodo.nome}' + " è stato fermato\n")
     except Exception as e:
-        print("Errore nello stop del container: ", e)
+        print("Errore nello stop del task: ", e)
 
 #rimuove un container dato il suo nodo e il suo id
 def remove_container(nodo, id_container):
     try:
         #per rimuovere il container deve prima essere spento
         nodo.client.containers.get(id_container).remove()
-        print("\nInfo> Un container sul nodo " + f'{nodo.nome}' + " è stato rimosso\n")
+        print("\nInfo> Un task sul nodo " + f'{nodo.nome}' + " è stato rimosso\n")
     except Exception as e:
-        print("Errore nella rimozione del container, controlla che fosse spento. Errore: ", e)
+        print("Errore nella rimozione del task, controlla che fosse spento. Errore: ", e)

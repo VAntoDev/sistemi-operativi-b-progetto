@@ -13,10 +13,10 @@ if __name__ == '__main__':
     lista_nodi = {
         #in fase di testing ho usato un ip statico, adesso che è su nodo-manager posso usare il DNS
         #per tornare ad usare il programma dall'esterno di docker è necessario
-        #cambiare gli ip: 172.21.0.2, 172.21.0.3, 172.21.0.4 (o gli ip attuali dei nodi docker se non sono questi descritti)
-        "nodo1": Nodo("nodo1", "nodo1avo"),
-        "nodo2": Nodo("nodo2", "nodo2avo"),
-        "nodo3": Nodo("nodo3", "nodo3avo"),
+        #cambiare gli ip: 172.21.0.2, 172.21.0.3, 172.21.0.4 (o con 22, o gli ip attuali dei nodi docker se non sono questi descritti)
+        "nodo1": Nodo("nodo1", "nodo1avo"), #nodo1avo
+        "nodo2": Nodo("nodo2", "nodo2avo"), #nodo2avo
+        "nodo3": Nodo("nodo3", "nodo3avo"), #nodo3avo
     }
 
     #elenco dei servizi validi (per evitare di scaricare immagini troppo pesanti sui container accidentalmente)

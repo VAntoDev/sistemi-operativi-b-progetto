@@ -38,4 +38,4 @@ def failover(container_attivi_nodo, nome, coda):
         )
         invia_richiesta(coda, "deploy", config_ricreata)
 
-    print(f"\nFailure_detection> Il nodo {nome} aveva questi container attivi e verranno rischedulati: {container_attivi}")
+    print(f"\nFailure_detection> Il nodo {nome} aveva questi task attivi e verranno rischedulati: {container_attivi}")
