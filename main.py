@@ -41,5 +41,5 @@ if __name__ == '__main__':
     menu = Menu(lista_nodi, coda, servizi_validi)
     menu.avvia_menu()
 
-    print("---Il codice ha finito di eseguire---")
+    print("---Il programma ha finito di eseguire---")
 
