@@ -26,11 +26,11 @@ cd repo_progetto/deploy
 ```
 2) Avviare i nodi worker:
 ```bash
-docker compose up -d nodo1 nodo2 nodo3
+docker compose up -d nodo1avo nodo2avo nodo3avo
 ```
 3) Avviare l'orchestratore:
 ```bash
-docker compose run --rm nodo-manager
+docker compose run --rm nodo-manager-avo
 ```
 L'orchestratore verrà avviato in modalità interattiva e sarà possibile utilizzare il menu tramite il suo terminale.
 ## Fermare il progetto
